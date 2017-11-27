@@ -1,6 +1,11 @@
 
 import java.util.ArrayList;
 import java.util.Hashtable;
+/**Classe que guardaria os segmentos do filme
+ * 
+ * @author 42977
+ *
+ */
 
 public class Movie {
 	

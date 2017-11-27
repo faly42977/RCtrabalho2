@@ -26,13 +26,12 @@ public class Main {
 			Socket playerSocket = ss.accept();
 			System.out.println("aceite!");
 			
-			
 			Movie m = inititializeMovie(playerSocket,serverSocket); //tambem trata do primeiro pedido do player
-			
-			Thread t1 = new Thread(new Getter(SERVERPORT,m));
+		
+			Thread t1 = new Thread(new Getter(SERVERPORT,m));//Para pedir segmentos ao servidor e meter em movie
 			t1.start();
 			
-			Thread t2 = new Thread(new Sender(playerSocket,m));
+			Thread t2 = new Thread(new Sender(playerSocket,m));// Mandar de movie para o player
 			t2.start(); 
 		}
 	}
