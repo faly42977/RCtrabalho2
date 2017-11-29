@@ -37,7 +37,13 @@ public class Sender implements Runnable{
 				if(line[0].equals("ERROR")) System.out.println("Sender - Error parsing line");
 				String command = line[1].substring(line[1].lastIndexOf("/") + 1); // obter X em GET .../.../.../X HTTP/1.0
 				boolean done = false;
-				while()
+				while(!done){
+					byte[] part = m.next();
+					if(part != null){
+						done = true;
+						HTTP.sendBytes(os,part);
+					}
+				}
 			} catch (IOException e) {
 				System.out.println("Error reading player input on steam");
 			}

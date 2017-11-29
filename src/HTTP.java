@@ -3,6 +3,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URLDecoder;
+import java.util.Properties;
+import java.util.Scanner;
 
 public class HTTP {
 	/**
@@ -75,8 +78,7 @@ public class HTTP {
 	public static  byte[] makeRequest(String path,InputStream is,OutputStream os) throws IOException{
 		String request = String.format(
 				"GET %s HTTP/1.0\r\n"
-			+	"User-Agent: X-RC2017\r\n"
-			+ 	"\r\n\r\n"
+			+	"User-Agent: X-RC2017\r\n\r\n"
 				, path);
 		String test; //TODO retirar
 		os.write(request.getBytes());
@@ -93,5 +95,26 @@ public class HTTP {
 		return b;
 	}
 	
-
+	/**
+	 * A partir de uma string com o conteudo de um form submetido no formato
+	 * application/x-www-form-urlencoded, devolve um objecto do tipo Properties,
+	 * associando a cada elemento do form o seu valor
+	 */
+	public static Properties parseHttpPostContents( String contents)
+			throws IOException {
+		Properties props = new Properties();
+		Scanner scanner = new Scanner( contents).useDelimiter( "&");
+		while( scanner.hasNext()) {
+			Scanner inScanner = new Scanner( scanner.next()).useDelimiter( "=");
+			String propName = URLDecoder.decode( inScanner.next(), "UTF-8");
+			String propValue = "";
+			try {
+				propValue = URLDecoder.decode( inScanner.next(), "UTF-8");
+			} catch( Exception e) {
+				// do nothing
+			}
+			props.setProperty( propName, propValue);
+		}
+		return props;
+	}
 }
