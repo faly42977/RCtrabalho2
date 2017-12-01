@@ -15,7 +15,7 @@ public class Proxy {
 	//*Primeira implementacao conta com unico tipo de segmentos pedidos (qld baixa)
 
 	private static final int CLIENTPORT = 1234;
-	private static final String SERVER_DEFAULT_URL = "http://localhost:8080";
+	private static final String SERVER_DEFAULT_URL = "http://192.168.99.100:8080";
 
 	//*Um so filme de cada vez
 	
@@ -51,21 +51,24 @@ public class Proxy {
 		System.out.println("Client Requested movie: "+ movieName);
 
 		//Obter Descriptor
-		String serverRequest = "GET /"+ movieName + "/descriptor.txt " + "HTTP/1.0\r\n\r\n";
+		String serverRequest = "GET /"+ movieName + "/descriptor.txt " + "HTTP/1.0\r\n"
+				+ "User-Agent: X-RC2017\r\n\r\n";
 		System.out.println("Request to server (descriptor): " + serverRequest);
 		toServer.write(serverRequest.getBytes());
 		String descriptor = readDescriptor(fromServer);
 		System.out.println("Descriptor Received");
-		serverSocket.close();
+		//serverSocket.close();
 		
-		 serverSocket = new Socket( serverAddr, serverPort );
+		 //serverSocket = new Socket( serverAddr, serverPort );
 		 toServer.flush();
-		 toServer = serverSocket.getOutputStream();
+		 //toServer = serverSocket.getOutputStream();
 		
 		//Obter Init File
-		serverRequest = "GET /"+ movieName + "/video/1/init.mp4 " + "HTTP/1.0 \r\n\r\n";
+		serverRequest = "GET /"+ movieName + "/video/1/init.mp4 " + "HTTP/1.0 \r\n"
+				+ "User-Agent: X-RC2017\r\n\r\n";
 		System.out.println("Request to server (Init): " + serverRequest);
 		toServer.write(serverRequest.getBytes());
+		System.out.println(fromServer.available());
 		byte[] init = getFragment(fromServer, 0);
 //		Movie movie = new Movie(movieName);
 		
