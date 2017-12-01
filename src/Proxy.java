@@ -15,13 +15,14 @@ public class Proxy {
 	//*Primeira implementacao conta com unico tipo de segmentos pedidos (qld baixa)
 
 	private static final int CLIENTPORT = 1234;
-	private static final String SERVER_DEFAULT_URL = "http://192.168.99.100:8080";
+	private static final String SERVER_DEFAULT_URL = "http://localhost:8080";
 
 	//*Um so filme de cada vez
 	
 	private byte[] descriptor; 
 
 	public static void main(String[] args) throws IOException {
+		System.out.println("running");
 		String Serverurl = args.length == 1 ? args[0] : SERVER_DEFAULT_URL;
 		URL serverUrl = new URL(Serverurl);
 		InetAddress serverAddr = InetAddress.getByName(serverUrl.getHost());;
@@ -59,9 +60,9 @@ public class Proxy {
 		System.out.println("Descriptor Received");
 		//serverSocket.close();
 		
-		 //serverSocket = new Socket( serverAddr, serverPort );
+		 
 		 toServer.flush();
-		 //toServer = serverSocket.getOutputStream();
+		 
 		
 		//Obter Init File
 		serverRequest = "GET /"+ movieName + "/video/1/init.mp4 " + "HTTP/1.0 \r\n"
