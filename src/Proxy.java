@@ -1,10 +1,9 @@
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
-<<<<<<< HEAD
+
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-=======
->>>>>>> master
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -14,16 +13,16 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLDecoder;
-<<<<<<< HEAD
+
 import java.util.ArrayList;
 import java.util.Properties;
 import java.util.Scanner;
 
 import HTTPUtilities.HTTPUtilities;
-=======
+
 import java.util.Properties;
 import java.util.Scanner;
->>>>>>> master
+
 
 
 
@@ -53,15 +52,14 @@ public class Proxy {
 		serverPort = serverUrl.getPort();
 		System.out.println("running");
 		//Get Request
-<<<<<<< HEAD
+
 		ServerSocket clientListener;
 		try {
 			clientListener = new ServerSocket(CLIENT_RECIEVER_PORT);
 			Socket clientSocket= clientListener.accept();
 			OutputStream toClient = clientSocket.getOutputStream();
 			InputStream fromClient = clientSocket.getInputStream();
-			int segmentCount = 0
-					;
+			int segmentCount = 0;
 			//handle start, get movie name
 			String url = HTTPUtilities.parseHttpRequest(HTTPUtilities.readLine(fromClient))[1];
 			String name = url.split("/")[2];
@@ -101,19 +99,16 @@ public class Proxy {
 			
 			String init = getFile( "/" + name + "/video/1/init.mp4", fromServer, toServer);
 			String seg = getFile( "/" + name + "/video/1/seg-1.m4s", fromServer, toServer);
-			StringBuilder sg = new StringBuilder();
-			sg.append(init);
-			sg.append(seg);
-			String fin = sg.toString();
 			String reply = "HTTP/1.0 200 OK\r\n"
 					+ "Access-Control-Allow-Origin: *\r\n"
-					+ "Content-Length: " + String.valueOf(fin.getBytes().length) + "\r\n"
+					+ "Content-Length: " + String.valueOf(init.getBytes().length + seg.getBytes().length) + "\r\n"
 					+ "Content-type: video/mp4; codecs=\"avc1.42C015, mp4a.40.2\"\r\n\r\n";
 			//FileOutputStream f = new FileOutputStream( name + "segcomp.m4s");
 			//f.write(seg.getBytes());
 			
 			toClient.write(reply.getBytes());
-			toClient.write(fin.getBytes());
+			toClient.write(init.getBytes());
+			toClient.write(seg.getBytes());
 			toClient.flush();
 			
 		}catch (IOException e) {
@@ -412,9 +407,6 @@ public class Proxy {
 <<<<<<< HEAD
 */
 		
-=======
-
->>>>>>> master
 //		
 //		boolean finished = false;
 //		int fragNum = 0;
