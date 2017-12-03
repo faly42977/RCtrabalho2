@@ -1,7 +1,10 @@
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+<<<<<<< HEAD
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+=======
+>>>>>>> master
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -11,11 +14,16 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLDecoder;
+<<<<<<< HEAD
 import java.util.ArrayList;
 import java.util.Properties;
 import java.util.Scanner;
 
 import HTTPUtilities.HTTPUtilities;
+=======
+import java.util.Properties;
+import java.util.Scanner;
+>>>>>>> master
 
 
 
@@ -45,6 +53,7 @@ public class Proxy {
 		serverPort = serverUrl.getPort();
 		System.out.println("running");
 		//Get Request
+<<<<<<< HEAD
 		ServerSocket clientListener;
 		try {
 			clientListener = new ServerSocket(CLIENT_RECIEVER_PORT);
@@ -179,10 +188,41 @@ public class Proxy {
 					
 
 
+=======
+		getRequest();
+
+
+		//enviar pacotes ao webPlayer
+		new Thread(() -> {
+			try {
+				int countSegments = 2;
+				while (buffering) {
+					ServerSocket clientListener = new ServerSocket(CLIENT_RECIEVER_PORT);
+					Socket clientSocket= clientListener.accept();
+					OutputStream toClient = clientSocket.getOutputStream();
+					InputStream fromClient = clientSocket.getInputStream();
+					while (fromClient.read()!= -1) {
+						System.out.println("done");
+					}
+					if (movie.getSegment(countSegments)!= null) {
+						StringBuilder replyAnswer = new StringBuilder("HTTP/1.0 200 OK\r\n");
+						replyAnswer.append("Access-Control-Allow-Origin: *"+"\r\n");
+						replyAnswer.append("Content-Length: "+ (movie.getSegment(countSegments).length 
+								+ movie.getInit().length)+"\r\n");
+						replyAnswer.append("Content-type: video/mp4; codecs=\"avc1.42C015, mp4a.40.2\"" + "\r\n\r\n");
+						countSegments++;
+						toClient.write(replyAnswer.toString().getBytes());
+						
+					}
+					
+
+
+>>>>>>> master
 				}
 			} catch (IOException e) {
 				System.out.println(e.getMessage());
 			}
+<<<<<<< HEAD
 
 		}).start();
 
@@ -205,6 +245,30 @@ public class Proxy {
 		}
 	}
 
+=======
+
+		}).start();
+
+		getFragments();
+
+	}
+
+	public static void getFragments() throws IOException {
+		boolean finished = false;
+		int segNum = 2;
+		while(finished) {
+			if (movie.findProperty( "video/1/seg-" + segNum + ".m4s")==null) 
+				finished = true;
+
+			else {
+				getFragment(segNum, serverAddr, segNum);
+				System.out.println("got frag num: " + segNum);
+				segNum++;
+			}
+		}
+	}
+
+>>>>>>> master
 
 
 	public static void getRequest() throws IOException {
@@ -242,7 +306,10 @@ public class Proxy {
 		ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
 		while ((nRead = fromServer.read(data, 0, data.length)) != -1) {
+<<<<<<< HEAD
 			System.out.println((char) nRead);
+=======
+>>>>>>> master
 			buffer.write(data, 0, nRead);
 			
 		}
@@ -342,8 +409,12 @@ public class Proxy {
 	}
 
 }
+<<<<<<< HEAD
 */
 		
+=======
+
+>>>>>>> master
 //		
 //		boolean finished = false;
 //		int fragNum = 0;
