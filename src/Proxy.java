@@ -1,5 +1,7 @@
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -9,8 +11,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.util.ArrayList;
 import java.util.Properties;
 import java.util.Scanner;
+
+import HTTPUtilities.HTTPUtilities;
 
 
 
@@ -40,9 +45,115 @@ public class Proxy {
 		serverPort = serverUrl.getPort();
 		System.out.println("running");
 		//Get Request
-		getRequest();
-
-
+		ServerSocket clientListener;
+		try {
+			clientListener = new ServerSocket(CLIENT_RECIEVER_PORT);
+			Socket clientSocket= clientListener.accept();
+			OutputStream toClient = clientSocket.getOutputStream();
+			InputStream fromClient = clientSocket.getInputStream();
+			int segmentCount = 0
+					;
+			//handle start, get movie name
+			String url = HTTPUtilities.parseHttpRequest(HTTPUtilities.readLine(fromClient))[1];
+			String name = url.split("/")[2];
+			System.out.println("Movie :" + name);
+			
+			//Start socket to server
+			Socket server = new Socket(serverAddr,serverPort);
+			OutputStream toServer = server.getOutputStream();
+			InputStream fromServer = server.getInputStream();
+			/*
+			//getInit
+			String request = "GET /" + name + "/descriptor.txt HTTP/1.1\r\n"
+					+"Host: localhost:8080\r\n"
+					+"User-Agent: X-RC2017\r\n\r\n";
+			toServer.write(request.getBytes());
+			System.out.println(request);
+			boolean done = false;
+			int size = 0;
+			String line;
+			while(!done){
+				line = HTTPUtilities.readLine(fromServer);
+				if(line.equals("")) {
+					done = true;
+				}
+				else if(line.contains("Content-Length: ")) {
+					String num = line.substring(line.indexOf(" ") + 1);
+					size = Integer.valueOf(num);
+					System.out.println("tamanho: " + size);
+				}
+			}
+			
+			StringBuilder string =  new StringBuilder(); 
+			for(int i=0;i<size;i++) {
+				int c = fromServer.read();
+				string.append(new Character((char) c));
+			}*/
+			
+			String init = getFile( "/" + name + "/video/1/init.mp4", fromServer, toServer);
+			String seg = getFile( "/" + name + "/video/1/seg-1.m4s", fromServer, toServer);
+			StringBuilder sg = new StringBuilder();
+			sg.append(init);
+			sg.append(seg);
+			String fin = sg.toString();
+			String reply = "HTTP/1.0 200 OK\r\n"
+					+ "Access-Control-Allow-Origin: *\r\n"
+					+ "Content-Length: " + String.valueOf(fin.getBytes().length) + "\r\n"
+					+ "Content-type: video/mp4; codecs=\"avc1.42C015, mp4a.40.2\"\r\n\r\n";
+			//FileOutputStream f = new FileOutputStream( name + "segcomp.m4s");
+			//f.write(seg.getBytes());
+			
+			toClient.write(reply.getBytes());
+			toClient.write(fin.getBytes());
+			toClient.flush();
+			
+		}catch (IOException e) {
+			System.out.println("erro de inicio");
+			e.printStackTrace();
+		}
+		
+	
+	}
+	
+	static String getFile(String path,InputStream fromServer,OutputStream toServer){
+		String request = "GET " + path +" HTTP/1.1\r\n"
+				+"Host: localhost:8080\r\n"
+				+"User-Agent: X-RC2017\r\n\r\n";
+		try {
+			toServer.write(request.getBytes());
+			System.out.println(request);
+			boolean done = false;
+			int size = 0;
+			String line;
+			while(!done){
+				line = HTTPUtilities.readLine(fromServer);
+				if(line.equals("")) {
+					done = true;
+				}
+				else if(line.contains("Content-Length: ")) {
+					String num = line.substring(line.indexOf(" ") + 1);
+					size = Integer.valueOf(num);
+					System.out.println("tamanho: " + size);
+				}
+			}
+			StringBuilder string =  new StringBuilder(); 
+			for(int i=0;i<size;i++) {
+				int c = fromServer.read();
+				string.append(new Character((char) c));
+			}
+			return string.toString();
+		}catch (IOException e) {
+			System.out.println("Erro na funcao");
+			return null;
+		}
+	}
+}		
+		//getRequest();
+		
+		
+	
+		
+		/*
 		//enviar pacotes ao webPlayer
 		new Thread(() -> {
 			try {
@@ -131,6 +242,7 @@ public class Proxy {
 		ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
 		while ((nRead = fromServer.read(data, 0, data.length)) != -1) {
+			System.out.println((char) nRead);
 			buffer.write(data, 0, nRead);
 			
 		}
@@ -230,7 +342,8 @@ public class Proxy {
 	}
 
 }
-
+*/
+		
 //		
 //		boolean finished = false;
 //		int fragNum = 0;
