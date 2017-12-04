@@ -26,6 +26,9 @@ public class Proxy {
 	static InetAddress serverAddr;
 	static int serverPort;
 	static String Serverurl;
+	static ServerSocket serverSocketToClient;
+	static OutputStream toClient ;
+	static InputStream fromClient;
 
 	public static void main(String[] args) throws IOException {
 
@@ -44,33 +47,34 @@ public class Proxy {
 		//enviar pacotes ao webPlayer
 		new Thread(() -> {
 			try {
-				ServerSocket serverSocketToClient = new ServerSocket(CLIENT_RECIEVER_PORT);
+				//
+				;
 				int countSegments = 2;
 				while (buffering) {
 					
-					
-					Socket clientSocketToClient = new Socket(clientAddr, clientSenderPort);
-					
-					OutputStream toClient = clientSocketToClient.getOutputStream();
-					InputStream fromClient = clientSocketToClient.getInputStream();
-					System.out.println(readLine(fromClient));
-					
+				
+					String request = readLine(fromClient);
+					int counter=0;
+					while ((readLine(fromClient)).compareTo("")!=0) {
+						counter ++;
+					}
+					System.out.println(request);
 					if (movie.getSegment(countSegments)!= null) {
 						StringBuilder replyAnswer = new StringBuilder("HTTP/1.0 200 OK\r\n");
 						replyAnswer.append("Access-Control-Allow-Origin: *"+"\r\n");
-						replyAnswer.append("Content-Length: "+ (movie.getSegment(countSegments).length 
-								+ movie.getInit().length)+"\r\n");
+						replyAnswer.append("Connection: Keep-Alive\r\n");
+						replyAnswer.append("Content-Length: "+ (movie.searchForSegmentSize(countSegments))+"\r\n");
 						replyAnswer.append("Content-type: video/mp4; codecs=\"avc1.42C015, mp4a.40.2\"" + "\r\n\r\n");
-						countSegments++;
+						
+						
 						toClient.write(replyAnswer.toString().getBytes());
+						toClient.write(movie.getSegment(countSegments));
+						//toClient.close();
+						countSegments++;
 						
 					}
-					
-					clientSocketToClient.close();
-
-
 				}
-				serverSocketToClient.close();
+				//serverSocketToClient.close();
 			} catch (IOException e) {
 				System.out.println(e.getMessage());
 			}
@@ -100,10 +104,15 @@ public class Proxy {
 
 
 	public static void getRequest() throws IOException {
-		ServerSocket serverSocketToClient = new ServerSocket(CLIENT_RECIEVER_PORT);
+		serverSocketToClient = new ServerSocket(CLIENT_RECIEVER_PORT);
 		Socket clientSocketToClient = serverSocketToClient.accept();
-
-		String request =  readLine(clientSocketToClient.getInputStream() );
+		fromClient = clientSocketToClient.getInputStream();
+		String request =  readLine(fromClient );
+		
+		int counter=0;
+		while ((readLine(fromClient)).compareTo("")!=0) {
+			counter ++;
+		}
 		Socket clientSocketToServer = new Socket( serverAddr, serverPort );
 		OutputStream toServer = clientSocketToServer.getOutputStream();
 		InputStream fromServer = clientSocketToServer.getInputStream();
@@ -129,24 +138,23 @@ public class Proxy {
 		serverRequest = "GET /"+ movie.getMovieName() + "/video/1/init.mp4 " + "HTTP/1.0 \r\n" + "User-Agent: X-RC2017\r\n\r\n";
 		toServer.write(serverRequest.getBytes());
 		System.out.println("Request to server (INIT): " + serverRequest);
-		
-		
 		ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-		int nRead;
-		byte[] data = new byte[1237];
-		int count = 0;
-		
-		
-		while ((nRead = fromServer.read(data, 0, data.length)) != -1) {
-		  buffer.write(data, 0, nRead);
-		  count+=nRead;
+		byte[] segment = new byte[Integer.valueOf(movie.searchForSegmentSize(0))];
+		int counter2 = 0;
+		while ((readLine(fromServer)).compareTo("")!=0) {
+			counter2 ++;
 		}
+		System.out.println("read " + counter2 + " lines of header");
 		
-		
-		System.out.println("Suposed: 1235 / counted:" + count);
+		int onlyData=0;
+		int nRead;
+		while ((nRead = fromServer.read(segment, 0, segment.length)) != -1) {
+		  buffer.write(segment, 0, nRead);
+		  onlyData+=nRead;
+		}
 		buffer.flush();
 		fromServer.close();
-		movie.setInit(data);
+		movie.setInit(segment);
 
 		System.out.println("Got InitFile");
 		clientSocketToServer.close();
@@ -158,28 +166,27 @@ public class Proxy {
 	
 
 		
-		String reply = "HTTP/1.0 200 OK\r\n"
+		String reply = "HTTP/1.1 200 OK\r\n"
 				+ "Access-Control-Allow-Origin: *\r\n"
-				+ "Content-Length: " + String.valueOf((movie.getInit().length + movie.getSegment(1).length)) + "\r\n"
+				
+				+ "Connection: Keep-Alive\r\n"
+				+ "Content-Length: " +( movie.getInit().length + movie.getSegment(1).length) + "\r\n"
 				+ "Content-type: video/mp4; codecs=\"avc1.42C015, mp4a.40.2\"\r\n\r\n";
 
-		OutputStream toClient = clientSocketToClient.getOutputStream();
+		toClient = clientSocketToClient.getOutputStream();
 		toClient.write(reply.getBytes());
-//		toClient.write(movie.getInit());
-//		toClient.write(movie.getSegment(1));
-		
 		byte[] c = new byte[(movie.getInit().length + movie.getSegment(1).length)];
 		System.arraycopy(movie.getInit(), 0,c, 0, movie.getInit().length);
 		System.arraycopy(movie.getSegment(1), 0, c, movie.getInit().length, movie.getSegment(1).length);
-		toClient.write(c);
 		
+		try {
+		toClient.write(c);
+		}catch(Exception e) {
+			System.out.println("message: " + e.getMessage());
+		}
 		
 		clientAddr = clientSocketToClient.getInetAddress();
 		clientSenderPort = clientSocketToClient.getPort();
-		
-		clientSocketToClient.close();
-		serverSocketToClient.close();
-
 	}
 
 
@@ -235,12 +242,23 @@ public class Proxy {
 			
 			ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 			int nRead;
-			byte[] segment = new byte[Integer.valueOf(movie.findProperty("video/1/seg-" + segNum + ".m4s"))]; 
-
+			//byte[] segment = new byte[Integer.valueOf(movie.findProperty("video/1/seg-" + segNum + ".m4s"))]; 
+			byte[] segment = new byte[Integer.valueOf(movie.searchForSegmentSize(segNum))];
+			int counter = 0; 
+			
+			while ((readLine(fromServer)).compareTo("")!=0) {
+				counter ++;
+			}
+			System.out.println("read " + counter + " lines of header");
+			
+			int onlyData=0;
 
 			while ((nRead = fromServer.read(segment, 0, segment.length)) != -1) {
 			  buffer.write(segment, 0, nRead);
+			  onlyData+=nRead;
 			}
+			
+			System.out.println("Data Size: " + onlyData + " bytes");
 			buffer.flush();
 			fromServer.close();
 			movie.setSegment(segNum, segment);

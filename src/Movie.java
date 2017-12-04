@@ -29,6 +29,17 @@ public class Movie {
 		return this.descriptor.get(key);
 
 	}
+	
+	public String searchForSegmentSize(int segNum) {
+		String answ = "";
+		if (segNum == 0)
+			answ = findProperty("video/1/init.mp4");
+		else
+		answ = findProperty("video/1/seg-" + segNum + ".m4s");
+		
+		return answ;
+		
+	}
 
 	public byte[] getSegment(int i) {
 		if (segments.size()>i)
