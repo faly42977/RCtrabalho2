@@ -274,6 +274,8 @@ public class Proxy {
 				onlyData+=nRead;
 			}
 
+			System.out.println("DATA SIZE " + onlyData );
+			System.out.println("SUPPOSED: " + movie.searchForSegmentSize(segNum));
 
 			//system.out.println("Data Size: " + onlyData + " bytes");
 			//			buffer.flush();
