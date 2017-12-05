@@ -59,6 +59,9 @@ public class Proxy {
 						counter ++;
 					}
 					System.out.println(request);
+					while(movie.getSegment(countSegments)== null) {
+						Thread.sleep(1);
+					}
 					if (movie.getSegment(countSegments)!= null) {
 						StringBuilder replyAnswer = new StringBuilder("HTTP/1.0 200 OK\r\n");
 						replyAnswer.append("Access-Control-Allow-Origin: *"+"\r\n");
@@ -77,6 +80,9 @@ public class Proxy {
 				//serverSocketToClient.close();
 			} catch (IOException e) {
 				System.out.println(e.getMessage());
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 			
 
