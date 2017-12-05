@@ -1,3 +1,5 @@
+
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -7,22 +9,39 @@ import java.util.Scanner;
 public class Movie {
 
 	private String movieName;
-	private List<byte []> segments;
+	private List<byte []> fragments;
 	private Map<String,String> descriptor;
+	private int numTracks;
+	private String[] contentTypes;
+	
 
 	public Movie(String name) {
 		this.movieName = name;
-		segments=new ArrayList<byte[]>();;
+		fragments=new ArrayList<byte[]>();;
+	}
+	
+	public int getNumTracks(){
+		return this.numTracks;
 	}
 
-	public void parseDescriptor(String desccriptor) {
+	public void parseDescriptor(String descriptor) {
 		this.descriptor = new HashMap<String, String>();
-		Scanner scanner = new Scanner( desccriptor);
+		int countContentTypes = 0;
+		Scanner scanner = new Scanner( descriptor);
 		while( scanner.hasNextLine()) {
 			String line = scanner.nextLine();
 			if (!line.isEmpty())
 				this.descriptor.put(line.split(" ")[0].trim(), line.split(" ")[1].trim());
+			if (line.contains("movie-tracks:"))
+				this.numTracks = Integer.valueOf(line.split(" ")[1].trim());
+			if (line.contains("Content-type:")) {
+				if (this.contentTypes == null)
+					this.contentTypes = new String[this.numTracks];
+				this.contentTypes[countContentTypes] =  line.split(":")[1].trim();
+				countContentTypes++;
+			}
 		}		
+		System.out.println(descriptor);
 	}
 
 	public String findProperty(String key) {
@@ -41,25 +60,25 @@ public class Movie {
 		
 	}
 
-	public byte[] getSegment(int i) {
-		if (segments.size()>i)
-			return segments.get(i);
+	public byte[] getFragment(int i) {
+		if (fragments.size()>i)
+			return fragments.get(i);
 		else
 			return null;
 	}
 
-	public void setSegment(int i, byte[] data) {
-		segments.add(i, data);
+	public void setFragment(int i, byte[] data) {
+		fragments.add(i, data);
 	}
 
 	public byte[] getInit() {
-		if (segments.size()>= 1)
-			return segments.get(0);
+		if (fragments.size()>= 1)
+			return fragments.get(0);
 		else 
 			return null;
 	}
 	public void setInit(byte[] init) {
-		segments.add(0, init);
+		fragments.add(0, init);
 	}
 	public String getMovieName() {
 		return movieName;
@@ -67,8 +86,6 @@ public class Movie {
 	public void setMovieName(String movieName) {
 		this.movieName = movieName;
 	}
-	private List<byte[]> getSegments() {
-		return segments;
-	}
 
 }
+
