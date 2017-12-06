@@ -8,20 +8,32 @@ import java.util.Scanner;
 
 public class Movie {
 
+	
 	private String movieName;
 	private List<byte []> fragments;
+	private List<Integer> qualityFragments;
 	private Map<String,String> descriptor;
-	private int numTracks;
+	private Integer numTracks;
 	private String[] contentTypes;
+	private Map<Integer,byte []> inits;
+	private int segmentDuration ;
 	
 
 	public Movie(String name) {
 		this.movieName = name;
 		fragments=new ArrayList<byte[]>();;
+		qualityFragments = new ArrayList<Integer>();
+		qualityFragments.add(0, null);
+		fragments.add(0, null);
+		inits = new HashMap<Integer, byte[]>();
 	}
 	
-	public int getNumTracks(){
+	public Integer getNumTracks(){
 		return this.numTracks;
+	}
+	
+	public String getContentType(int quality) {
+		return contentTypes[quality];
 	}
 
 	public void parseDescriptor(String descriptor) {
@@ -40,8 +52,10 @@ public class Movie {
 				this.contentTypes[countContentTypes] =  line.split(":")[1].trim();
 				countContentTypes++;
 			}
+			if (line.contains("Segment-duration:"))
+				this.segmentDuration = Integer.valueOf(line.split(" ")[1].trim());
 		}		
-		System.out.println(descriptor);
+
 	}
 
 	public String findProperty(String key) {
@@ -49,12 +63,12 @@ public class Movie {
 
 	}
 	
-	public String searchForSegmentSize(int segNum) {
+	public String searchForSegmentSize(int segNum, int quality) {
 		String answ = "";
 		if (segNum == 0)
-			answ = findProperty("video/1/init.mp4");
+			answ = findProperty("video/"+ quality +"/init.mp4");
 		else
-		answ = findProperty("video/1/seg-" + segNum + ".m4s");
+		answ = findProperty("video/"+ quality + "/seg-" + segNum + ".m4s");
 		
 		return answ;
 		
@@ -66,25 +80,39 @@ public class Movie {
 		else
 			return null;
 	}
-
-	public void setFragment(int i, byte[] data) {
-		fragments.add(i, data);
-	}
-
-	public byte[] getInit() {
-		if (fragments.size()>= 1)
-			return fragments.get(0);
-		else 
+	
+	public Integer getQualityFragment(int i) {
+		if (fragments.size()>i)
+			return qualityFragments.get(i);
+		else
 			return null;
 	}
-	public void setInit(byte[] init) {
-		fragments.add(0, init);
+	
+
+	public void setFragment(int i, byte[] data, int quality) {
+		fragments.add(i, data);
+		qualityFragments.add(i, quality);
+	}
+
+	public byte[] getInit(int quality) {
+		return inits.get(quality);
+	}
+	public void setInit( int quality, byte[] init) {
+		inits.put(quality, init);
 	}
 	public String getMovieName() {
 		return movieName;
 	}
 	public void setMovieName(String movieName) {
 		this.movieName = movieName;
+	}
+
+	public int getSegmentDuration() {
+		return segmentDuration;
+	}
+
+	public void setSegmentDuration(int segmentDuration) {
+		this.segmentDuration = segmentDuration;
 	}
 
 }
