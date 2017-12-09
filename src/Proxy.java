@@ -35,6 +35,7 @@ public class Proxy {
 	static boolean start;
 	static boolean trasfered;
 	static int sumFragments; 
+	static Socket clientSocketToServer;
 	public static void main(String[] args) throws IOException {
 		start = true;
 		for (;;) {
@@ -54,7 +55,9 @@ public class Proxy {
 			serverAddr = InetAddress.getByName(serverUrl.getHost());;
 			serverPort = serverUrl.getPort();
 			System.out.println("running");
-
+			
+			clientSocketToServer = new Socket( serverAddr, serverPort );
+			
 			//Get Request
 			getRequest();
 
@@ -97,7 +100,7 @@ public class Proxy {
 								replyAnswer.append("Connection: Keep-Alive\r\n");
 								replyAnswer.append("Content-Length: "+ (movie.searchForSegmentSize(countSegmentsSent , movie.getQualityFragment(countSegmentsSent)))+"\r\n");
 								replyAnswer.append("Content-type: " + movie.getContentType(qualityTrack-1) + "\r\n\r\n");
-								toClient.write(replyAnswer.toString().getBytes());
+							 	toClient.write(replyAnswer.toString().getBytes());
 								toClient.write(movie.getFragment(countSegmentsSent));
 								countSegmentsSent++;
 							}
@@ -155,13 +158,14 @@ public class Proxy {
 
 		else {
 			//get Init
-			Socket clientSocketToServer = new Socket( serverAddr, serverPort );
+			
 			OutputStream toServer = clientSocketToServer.getOutputStream();
 			InputStream fromServer = clientSocketToServer.getInputStream();
-			clientSocketToServer = new Socket( serverAddr, serverPort );
 			toServer = clientSocketToServer.getOutputStream();
 			fromServer = clientSocketToServer.getInputStream();
-			String serverRequest = "GET /"+ movie.getMovieName() + "/video/"+ qualityTrack +"/init.mp4 " + "HTTP/1.0 \r\n" + "User-Agent: X-RC2017\r\n\r\n";
+			String serverRequest = "GET /"+ movie.getMovieName() + "/video/"+ qualityTrack +"/init.mp4 " + "HTTP/1.1 \r\n"
+				+ "Host: localhost:8080"
+				+ "User-Agent: X-RC2017\r\n\r\n";
 			toServer.write(serverRequest.getBytes());
 
 			ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -171,17 +175,15 @@ public class Proxy {
 				continue;
 
 
-			int onlyData=0;
+			int dataRead=0;
 			int nRead;
-			while ((nRead = fromServer.read(segment, 0, segment.length)) != -1) {
-				buffer.write(segment, 0, nRead);
-				onlyData+=nRead;
+			while (dataRead < segment.length) {
+				nRead = fromServer.read(segment, dataRead, segment.length - dataRead);
+				dataRead +=nRead;
 			}
-			buffer.flush();
-			fromServer.close();
-			movie.setInit(qualityTrack-1, buffer.toByteArray());
+			//fromServer.close();
+			movie.setInit(qualityTrack-1, segment);
 
-			clientSocketToServer.close();
 			return movie.getInit(qualityTrack-1);
 		}
 	}
@@ -227,18 +229,26 @@ public class Proxy {
 		while (readLine(fromClient).compareTo("")!=0) 
 			continue;
 
-		Socket clientSocketToServer = new Socket( serverAddr, serverPort );
 		OutputStream toServer = clientSocketToServer.getOutputStream();
 		InputStream fromServer = clientSocketToServer.getInputStream();
 		movie = new Movie(getMovieNameFromRequest(request));
 
 		//get Descriptor
-		String serverRequest = "GET /"+ movie.getMovieName() + "/descriptor.txt " + "HTTP/1.0\r\n" + "User-Agent: X-RC2017\r\n\r\n";
+		String serverRequest = "GET /"+ movie.getMovieName() + "/descriptor.txt " + "HTTP/1.1\r\n"
+				+ "Host: localhost:8080\r\n"
+				+ "User-Agent: X-RC2017\r\n\r\n";
 		toServer.write(serverRequest.getBytes());
-		String descriptor = readDescriptor(fromServer);
+		String line;
+		int toRead = 0;
+		while(!(line = readLine(fromServer)).equals("")){
+			if(line.contains("Content-Length")) {
+				toRead = Integer.parseInt(line.split(" ")[1]);
+				System.out.println("DESCRIPTOR BYTES: " + toRead);
+			}
+				
+		}
+		String descriptor = readDescriptor(fromServer,toRead);
 		movie.parseDescriptor(descriptor);
-		movie.parseDescriptor(descriptor);
-		clientSocketToServer.close();
 
 		getInit(qualityTrack);
 
@@ -283,52 +293,52 @@ public class Proxy {
 		return sb.toString();
 	}
 
-	public static String readDescriptor(InputStream fromServer) throws IOException{
-		BufferedReader reader = new BufferedReader(new InputStreamReader(fromServer));
+	public static String readDescriptor(InputStream fromServer, int toRead) throws IOException{
 		StringBuilder result = new StringBuilder();
-		String line;
-		while((line = reader.readLine()) != null) 
-			result.append(line+"\n");
-
-		fromServer.close();
+		for(int i = 0;i < toRead;i++) {
+			int c = fromServer.read();
+			result.append(new Character((char) c));
+		}
 		return result.toString();
 	}
 
 	public static boolean getFragment(int segNum, InetAddress serverAddr, int serverPort, int quality) throws IOException {
 
-		Socket clientSocketToServer = new Socket( serverAddr, serverPort );
 		OutputStream toServer = clientSocketToServer.getOutputStream();
 		InputStream fromServer = clientSocketToServer.getInputStream();
 		String serverRequest;
 
 		if (movie.findProperty( "video/1/seg-" + segNum + ".m4s")==null) {
 			trasfered = true;
-			clientSocketToServer.close();
+			clientSocketToServer.close();//keep
 		}
 
 		else {
-			serverRequest = "GET /"+ movie.getMovieName() + "/video/"+ quality +"/seg-" + segNum + ".m4s " + "HTTP/1.0 \r\n" + "User-Agent: X-RC2017\r\n\r\n";
+			serverRequest = "GET /"+ movie.getMovieName() + "/video/"+ quality +"/seg-" + segNum + ".m4s " + "HTTP/1.1 \r\n"
+					+ "Host: localhost:8080\r\n"
+					+ "User-Agent: X-RC2017\r\n\r\n";
 			String urlReq = "localhost:8080/" + movie.getMovieName() +  "/video/"+ quality + "/seg-" + segNum + ".m4s";
 			toServer.write(serverRequest.getBytes());
 
 			ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-			int nRead;
 			byte[] segment = new byte[Integer.valueOf(movie.searchForSegmentSize(segNum, quality))];
 			String headerLine = "-1"; 
 
 			while (headerLine.compareTo("")!=0) 
 				headerLine = readLine(fromServer);
 
-			while ((nRead = fromServer.read(segment, 0, segment.length)) != -1) {
-				buffer.write(segment, 0, nRead);
+			int dataRead=0;
+			int nRead;
+			while (dataRead < segment.length) {
+				nRead = fromServer.read(segment, dataRead, segment.length - dataRead);
+				dataRead +=nRead;
 			}
 
-			fromServer.close();
+			//fromServer.close();
 			countSegmentsReceived++;
-			movie.setFragment(segNum, buffer.toByteArray(), quality);
+			movie.setFragment(segNum, segment, quality);
 		}
 
-		clientSocketToServer.close();
 		return trasfered;
 	}
 
