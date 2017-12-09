@@ -38,6 +38,11 @@ public class Proxy {
 	static int sumFragments; 
 	static Socket clientSocketToServer;
 	static Semaphore semaphore; 
+	
+	// vaariaveis de teste
+	static float totalQuality;
+	static float count;
+	
 	public static void main(String[] args) throws IOException {
 		start = true;
 		for (;;) {
@@ -106,6 +111,12 @@ public class Proxy {
 							 	toClient.write(replyAnswer.toString().getBytes());
 								toClient.write(movie.getFragment(countSegmentsSent));
 								countSegmentsSent++;
+								
+								//TESTE
+								count++;
+								totalQuality += movie.getQualityFragment(countSegmentsSent-1);
+								System.out.println("--------------------------> AVG" + totalQuality/count);
+								
 							}
 
 							else {
@@ -120,6 +131,11 @@ public class Proxy {
 								toClient.write(getInit(movie.getQualityFragment(countSegmentsSent)));
 								toClient.write(movie.getFragment(countSegmentsSent));
 								countSegmentsSent++;
+								
+								//TESTE
+								count++;
+								totalQuality += movie.getQualityFragment(countSegmentsSent-1);
+								System.out.println("--------------------------> AVG" + totalQuality/count);
 							}
 
 						}
