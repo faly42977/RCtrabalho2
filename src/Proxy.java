@@ -50,7 +50,6 @@ public class Proxy {
 			if (start == true) {
 			//Fazer a primeira conexao - 
 
-			//Comeco pessimista com pior qld
 			prvsqualityDiff = 1;
 			sumFragments = 0;
 			start = true;
@@ -67,7 +66,7 @@ public class Proxy {
 			
 			clientSocketToServer = new Socket( serverAddr, serverPort );
 			
-			//Get Request
+			
 			getRequest();
 
 
@@ -77,10 +76,7 @@ public class Proxy {
 					countSegmentsSent = 2;
 					while (buffering) {				
 						while(countSegmentsReceived < getNumberFragmentsDelay() && start) {Thread.sleep(1);}
-							//System.out.println("Buffering");
-
 						start = false;
-						//qualityTrack=1;
 						String request = readLine(fromClient);
 						while (movie.getFragment(countSegmentsSent)== null) {
 							Thread.sleep(1);	
@@ -113,11 +109,6 @@ public class Proxy {
 								toClient.write(movie.getFragment(countSegmentsSent));
 								countSegmentsSent++;
 								
-								//TESTE
-								count++;
-								totalQuality += movie.getQualityFragment(countSegmentsSent-1);
-								System.out.println("--------------------------> AVG" + totalQuality/count + "sent " + (countSegmentsSent - 1));
-								
 							}
 
 							else {
@@ -133,10 +124,6 @@ public class Proxy {
 								toClient.write(movie.getFragment(countSegmentsSent));
 								countSegmentsSent++;
 								
-								//TESTE
-								count++;
-								totalQuality += movie.getQualityFragment(countSegmentsSent-1);
-								System.out.println("--------------------------> AVG" + totalQuality/count);
 							}
 
 						}
@@ -204,7 +191,6 @@ public class Proxy {
 				nRead = fromServer.read(segment, dataRead, segment.length - dataRead);
 				dataRead +=nRead;
 			}
-			//fromServer.close();
 			movie.setInit(qualityTrack-1, segment);
 
 			return movie.getInit(qualityTrack-1);
@@ -221,7 +207,6 @@ public class Proxy {
 	public static void changeQuality() throws IOException {
 
 		int diff = countSegmentsReceived - (countSegmentsSent + getNumberFragmentsDelay());
-		int record = qualityTrack;
 
 		if (diff< 3)
 			qualityTrack = 1;
@@ -247,14 +232,9 @@ public class Proxy {
 			//diminuindo /igual -> prevenimos espera
 			qualityTrack --;
 		}
-		System.out.println("RTT " + rtt + " ms");
-		System.out.println("GETTING " + countSegmentsReceived);
-		System.out.println("PREVIOUS DIFF" + prvsqualityDiff);
-		System.out.println("ACTUAL DIFF" + diff);
-		System.out.println("OLD QLT" + record);
-		System.out.println("NEW QLT" + qualityTrack);
+		
 		prvsqualityDiff=diff;
-		System.out.println("**************************");
+	
 
 	}
 
@@ -281,7 +261,6 @@ public class Proxy {
 		while(!(line = readLine(fromServer)).equals("")){
 			if(line.contains("Content-Length")) {
 				toRead = Integer.parseInt(line.split(" ")[1]);
-				System.out.println("DESCRIPTOR BYTES: " + toRead);
 			}
 				
 		}
@@ -289,7 +268,6 @@ public class Proxy {
 		movie.parseDescriptor(descriptor);
 
 		getInit(qualityTrack);
-		System.out.println("********************************************************first INIT");
 		//get 1stFrag
 		getFragment(1, serverAddr, serverPort, qualityTrack);
 
@@ -349,7 +327,7 @@ public class Proxy {
 
 		if (movie.findProperty( "video/1/seg-" + segNum + ".m4s")==null) {
 			trasfered = true;
-			clientSocketToServer.close();//keep
+			clientSocketToServer.close();
 		}
 
 		else {
@@ -360,11 +338,9 @@ public class Proxy {
 				serverRequest = "GET /"+ movie.getMovieName() + "/video/"+ quality +"/seg-" + segNum + ".m4s " + "HTTP/1.1 \r\n"
 					+ "Host: localhost:8080\r\n"
 					+ "User-Agent: X-RC2017\r\n\r\n";
-				String urlReq = "localhost:8080/" + movie.getMovieName() +  "/video/"+ quality + "/seg-" + segNum + ".m4s";
 				long start = System.nanoTime();
 				toServer.write(serverRequest.getBytes());
 				
-				ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 				byte[] segment = new byte[Integer.valueOf(movie.searchForSegmentSize(segNum, quality))];
 				String headerLine = "-1"; 
 
@@ -379,7 +355,7 @@ public class Proxy {
 				}
 				rtt = (System.nanoTime() - start)/1000000;
 
-				//fromServer.close();
+			
 				countSegmentsReceived++;
 				movie.setFragment(segNum, segment, quality);
 				} catch (InterruptedException e) {

@@ -54,7 +54,8 @@ public class Movie {
 			}
 			if (line.contains("Segment-duration:"))
 				this.segmentDuration = Integer.valueOf(line.split(" ")[1].trim());
-		}		
+		}
+		scanner.close();
 
 	}
 
