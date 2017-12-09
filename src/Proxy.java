@@ -42,6 +42,8 @@ public class Proxy {
 	static float totalQuality;
 	static float count;
 	
+	static long rtt;
+	
 	public static void main(String[] args) throws IOException {
 		start = true;
 		for (;;) {
@@ -114,7 +116,7 @@ public class Proxy {
 								//TESTE
 								count++;
 								totalQuality += movie.getQualityFragment(countSegmentsSent-1);
-								System.out.println("--------------------------> AVG" + totalQuality/count);
+								System.out.println("--------------------------> AVG" + totalQuality/count + "sent " + (countSegmentsSent - 1));
 								
 							}
 
@@ -216,18 +218,20 @@ public class Proxy {
 		}
 	}
 
-	public static void changeQuality() {
+	public static void changeQuality() throws IOException {
 
 		int diff = countSegmentsReceived - (countSegmentsSent + getNumberFragmentsDelay());
 		int record = qualityTrack;
 
-		if (diff<=0)
+		if (diff< 3)
 			qualityTrack = 1;
-		else if (diff > 10){
+		else if(diff > 5 && rtt > 2500)
+			qualityTrack = 1;
+		else if (diff > 10 && rtt < 1800){
 			qualityTrack = movie.getNumTracks();
 		}
-		else if(diff < 3) {
-			qualityTrack = 1;
+		else if (diff > 15) {
+			qualityTrack = movie.getNumTracks();
 		}
 		else if (diff > prvsqualityDiff && qualityTrack<movie.getNumTracks()	) {
 			//aumentando
@@ -243,6 +247,7 @@ public class Proxy {
 			//diminuindo /igual -> prevenimos espera
 			qualityTrack --;
 		}
+		System.out.println("RTT " + rtt + " ms");
 		System.out.println("GETTING " + countSegmentsReceived);
 		System.out.println("PREVIOUS DIFF" + prvsqualityDiff);
 		System.out.println("ACTUAL DIFF" + diff);
@@ -356,8 +361,9 @@ public class Proxy {
 					+ "Host: localhost:8080\r\n"
 					+ "User-Agent: X-RC2017\r\n\r\n";
 				String urlReq = "localhost:8080/" + movie.getMovieName() +  "/video/"+ quality + "/seg-" + segNum + ".m4s";
+				long start = System.nanoTime();
 				toServer.write(serverRequest.getBytes());
-
+				
 				ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 				byte[] segment = new byte[Integer.valueOf(movie.searchForSegmentSize(segNum, quality))];
 				String headerLine = "-1"; 
@@ -371,6 +377,7 @@ public class Proxy {
 					nRead = fromServer.read(segment, dataRead, segment.length - dataRead);
 					dataRead +=nRead;
 				}
+				rtt = (System.nanoTime() - start)/1000000;
 
 				//fromServer.close();
 				countSegmentsReceived++;
