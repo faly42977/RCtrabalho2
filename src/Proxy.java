@@ -12,7 +12,6 @@ import java.util.concurrent.Semaphore;
 
 //A nossa Arquitectura assenta na comunicacao por proxy de um SERVIDOR para um CLIENT (Web player) 
 public class Proxy {
-	//*Primeira implementacao conta com unico tipo de segmentos pedidos (qld baixa)
 
 	private static final int CLIENT_RECIEVER_PORT = 1234;
 	private static final String SERVER_DEFAULT_URL = "http://localhost:8080";
@@ -79,7 +78,7 @@ public class Proxy {
 							//System.out.println("Buffering");
 
 						start = false;
-						qualityTrack=1;
+						//qualityTrack=1;
 						String request = readLine(fromClient);
 						while (movie.getFragment(countSegmentsSent)== null) {
 							Thread.sleep(1);	
@@ -224,7 +223,12 @@ public class Proxy {
 
 		if (diff<=0)
 			qualityTrack = 1;
-
+		else if (diff > 10){
+			qualityTrack = movie.getNumTracks();
+		}
+		else if(diff < 3) {
+			qualityTrack = 1;
+		}
 		else if (diff > prvsqualityDiff && qualityTrack<movie.getNumTracks()	) {
 			//aumentando
 			qualityTrack++;
@@ -239,7 +243,7 @@ public class Proxy {
 			//diminuindo /igual -> prevenimos espera
 			qualityTrack --;
 		}
-
+		System.out.println("GETTING " + countSegmentsReceived);
 		System.out.println("PREVIOUS DIFF" + prvsqualityDiff);
 		System.out.println("ACTUAL DIFF" + diff);
 		System.out.println("OLD QLT" + record);
