@@ -8,6 +8,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
+import java.util.concurrent.Semaphore;
 
 //A nossa Arquitectura assenta na comunicacao por proxy de um SERVIDOR para um CLIENT (Web player) 
 public class Proxy {
@@ -36,6 +37,7 @@ public class Proxy {
 	static boolean trasfered;
 	static int sumFragments; 
 	static Socket clientSocketToServer;
+	static Semaphore semaphore; 
 	public static void main(String[] args) throws IOException {
 		start = true;
 		for (;;) {
@@ -54,6 +56,7 @@ public class Proxy {
 			URL serverUrl = new URL(Serverurl);
 			serverAddr = InetAddress.getByName(serverUrl.getHost());;
 			serverPort = serverUrl.getPort();
+			semaphore = new Semaphore(1);
 			System.out.println("running");
 			
 			clientSocketToServer = new Socket( serverAddr, serverPort );
@@ -67,8 +70,8 @@ public class Proxy {
 				try {
 					countSegmentsSent = 2;
 					while (buffering) {				
-						while(countSegmentsReceived < getNumberFragmentsDelay() && start)
-							System.out.println("Buffering");
+						while(countSegmentsReceived < getNumberFragmentsDelay() && start) {Thread.sleep(1);}
+							//System.out.println("Buffering");
 
 						start = false;
 						qualityTrack=1;
@@ -157,25 +160,28 @@ public class Proxy {
 		}
 
 		else {
-			//get Init
+			try {
+				semaphore.acquire();
 			
+			//get Init
 			OutputStream toServer = clientSocketToServer.getOutputStream();
 			InputStream fromServer = clientSocketToServer.getInputStream();
 			toServer = clientSocketToServer.getOutputStream();
 			fromServer = clientSocketToServer.getInputStream();
-			String serverRequest = "GET /"+ movie.getMovieName() + "/video/"+ qualityTrack +"/init.mp4 " + "HTTP/1.1 \r\n"
-				+ "Host: localhost:8080"
+			
+			String serverRequest = "GET /"+ movie.getMovieName() + "/video/"+ qualityTrack +"/init.mp4 HTTP/1.1 \r\n"
+				+ "Host: localhost:8080\r\n"
 				+ "User-Agent: X-RC2017\r\n\r\n";
 			toServer.write(serverRequest.getBytes());
 
-			ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 			byte[] segment = new byte[Integer.valueOf(movie.searchForSegmentSize(0, qualityTrack))];
+			String line;
+			String headerLine = "-1"; 
 
-			while ((readLine(fromServer)).compareTo("")!=0) 
-				continue;
-
-
-			int dataRead=0;
+			while (headerLine.compareTo("")!=0) { 
+				headerLine = readLine(fromServer);
+			}
+			int dataRead = 0;
 			int nRead;
 			while (dataRead < segment.length) {
 				nRead = fromServer.read(segment, dataRead, segment.length - dataRead);
@@ -185,6 +191,13 @@ public class Proxy {
 			movie.setInit(qualityTrack-1, segment);
 
 			return movie.getInit(qualityTrack-1);
+			} catch (InterruptedException e) {
+				System.out.println("ERRO NO SEMAFRO");
+				return null;
+			}finally {
+				semaphore.release();
+			}
+		
 		}
 	}
 
@@ -251,7 +264,7 @@ public class Proxy {
 		movie.parseDescriptor(descriptor);
 
 		getInit(qualityTrack);
-
+		System.out.println("********************************************************first INIT");
 		//get 1stFrag
 		getFragment(1, serverAddr, serverPort, qualityTrack);
 
@@ -289,6 +302,7 @@ public class Proxy {
 			if( c == '\r' ) continue ;
 			if( c == '\n' ) break ;
 			sb.append( new Character( (char)c) ) ;
+			
 		}
 		return sb.toString();
 	}
@@ -314,29 +328,38 @@ public class Proxy {
 		}
 
 		else {
-			serverRequest = "GET /"+ movie.getMovieName() + "/video/"+ quality +"/seg-" + segNum + ".m4s " + "HTTP/1.1 \r\n"
+			
+			try {
+				semaphore.acquire();
+			
+				serverRequest = "GET /"+ movie.getMovieName() + "/video/"+ quality +"/seg-" + segNum + ".m4s " + "HTTP/1.1 \r\n"
 					+ "Host: localhost:8080\r\n"
 					+ "User-Agent: X-RC2017\r\n\r\n";
-			String urlReq = "localhost:8080/" + movie.getMovieName() +  "/video/"+ quality + "/seg-" + segNum + ".m4s";
-			toServer.write(serverRequest.getBytes());
+				String urlReq = "localhost:8080/" + movie.getMovieName() +  "/video/"+ quality + "/seg-" + segNum + ".m4s";
+				toServer.write(serverRequest.getBytes());
 
-			ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-			byte[] segment = new byte[Integer.valueOf(movie.searchForSegmentSize(segNum, quality))];
-			String headerLine = "-1"; 
+				ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+				byte[] segment = new byte[Integer.valueOf(movie.searchForSegmentSize(segNum, quality))];
+				String headerLine = "-1"; 
 
-			while (headerLine.compareTo("")!=0) 
+				while (headerLine.compareTo("")!=0) 
 				headerLine = readLine(fromServer);
 
-			int dataRead=0;
-			int nRead;
-			while (dataRead < segment.length) {
-				nRead = fromServer.read(segment, dataRead, segment.length - dataRead);
-				dataRead +=nRead;
-			}
+				int dataRead=0;
+				int nRead;
+				while (dataRead < segment.length) {
+					nRead = fromServer.read(segment, dataRead, segment.length - dataRead);
+					dataRead +=nRead;
+				}
 
-			//fromServer.close();
-			countSegmentsReceived++;
-			movie.setFragment(segNum, segment, quality);
+				//fromServer.close();
+				countSegmentsReceived++;
+				movie.setFragment(segNum, segment, quality);
+				} catch (InterruptedException e) {
+					System.out.println("ERRO NO SEMAFRO");
+				}finally {
+				semaphore.release();
+				}
 		}
 
 		return trasfered;
